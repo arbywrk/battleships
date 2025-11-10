@@ -1,7 +1,9 @@
-# Objects: Ship, Game, Bord 
+from domain.game import Game
 
 def main():
-    print("Hello World!")
+    g = Game()
+    g.start_game_loop()
+    print(g)
 
 if __name__ == "__main__":
     main()
