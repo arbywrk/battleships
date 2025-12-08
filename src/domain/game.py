@@ -8,10 +8,9 @@ class Game:
         self.__is_running = False
     
     def __setup(self):
-        # TODO: split the board into 4 spearate ones
-        self.__board = Board()
-        self.__player1 = Player(Fleet())
-        self.__player2 = Player(Fleet())
+        BOARD_SIZE = 10
+        self.__player1 = Player(Fleet(), BOARD_SIZE)
+        self.__player2 = Player(Fleet(), BOARD_SIZE)
 
     def start_game_loop(self):
         if self.__is_running:
@@ -20,8 +19,10 @@ class Game:
         self.__is_running = True
 
         # first phase (place ships)
-        self.__player1.place_ships(self.__board)
-        self.__player2.place_ships(self.__board)
+        self.__player1.place_ships()
+        self.__player2.place_ships()
+
+        return
 
         # second phase (fight)
         first_players_turn = True
@@ -29,10 +30,10 @@ class Game:
             x, y = 1, 1 # this is test data (must be removed)
             #TODO:  get x, y from user
             if first_players_turn:
-                self.__player1.try_hit(self.__board, x, y)
+                self.__player1.try_hit(x, y)
                 first_players_turn = False
             else:
-                self.__player2.try_hit(self.__board, x, y)
+                self.__player2.try_hit(x, y)
                 first_players_turn = True
             if (self.__is_a_winner()):
                 break

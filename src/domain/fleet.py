@@ -7,7 +7,7 @@ class Fleet:
     def get_ships(self) -> list[Ship]:
         return self.__ships
 
-    def empty(self) -> bool:
+    def destroyed(self) -> bool:
         for ship in self.__ships:
             if not ship.is_destroyed():
                 return False
