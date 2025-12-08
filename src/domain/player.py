@@ -23,11 +23,15 @@ class Player:
     def place_ships(self):
         """Gets the input from the user and places the ships"""
         for ship in self.__fleet.get_ships():
-            x = int(input("Give x of head: "))
-            y = int(input("Give y of head: "))
-            direction = input("Give direction(l, r, up, dn)")
-            # TODO: check input validity (in class)
-            while not self.__place_ship(x, y, direction, ship.get_size()):
+            while True:
+                print(self.__player_board.get_printable())
+                x = int(input("Give x of head: "))
+                y = int(input("Give y of head: "))
+                direction = input("Give direction(l, r, up, dn)")
+                # TODO: check input validity (in class)
+                ok = self.__place_ship(x, y, direction, ship.get_size())
+                if ok:
+                    break
                 print("Can't place ship on the given location")
 
     def try_hit(self, x, y) -> bool:

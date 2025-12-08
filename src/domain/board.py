@@ -21,7 +21,9 @@ class Board:
         """
 
         # check if the head can be placed
-        if self.__board[x][y] != " ":
+        if x < 0 or x >= len(self.__board) or \
+           y < 0 or y >= len(self.__board[x]) or \
+           self.__board[x][y] != " ":
             return False
         
         # check if the rest of the ship can be placed 
