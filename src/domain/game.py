@@ -21,6 +21,7 @@ class Game:
         self.__player1.place_ships()
         self.__player2.place_ships()
 
+        # TODO: (in holiday) remove the return so that you can implement the try hit
         return # early return for developing the first part of the game
 
         # second phase (fight)

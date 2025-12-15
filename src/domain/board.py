@@ -46,6 +46,9 @@ class Board:
     def get_printable(self) -> str:
         return self.__str__()
 
+    # TODO: (in holiday) replace the return type of this function to None (return nothing):
+    # and handle the case in which you don't have valid input (the ones in which you return False)
+    # with exceptions and try...except
     def place_ship(self, x: int, y: int, direction: str, ship_length: int) -> bool:
         """
         Places the ship in the board.
@@ -104,6 +107,7 @@ class Board:
 
         return True # success
 
+    # TODO: (in holiday) implement try_hit (follow the exemples we wrote)
     def try_hit(self, x, y) -> bool:
         # TODO: check if this was already hit
         # TODO: mark the ship as hit

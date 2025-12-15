@@ -7,7 +7,7 @@ class Player:
         self.__player_board = Board(friedly_ship_symbol, board_size)
         self.__opponent_board = Board(enemy_ship_symbol, board_size)
 
-    #TODO: change direction to an enum
+    #TODO: change direction to an enum (in class)
     def __place_ship(self, x: int, y: int, direction: str, ship_size: int) -> bool:
         """
         Calls the board's method for placing a ship
