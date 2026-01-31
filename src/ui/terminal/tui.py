@@ -4,6 +4,7 @@ from game import Game
 class TerminalUI:
     def __init__(self, game: Game):
         self.game = game
+        self.__error_msg: str | None = None
 
     def start(self):
         self.__start_menu()
@@ -27,8 +28,14 @@ class TerminalUI:
         else:
             print("Unknown choice")
 
-    def print_error(self):
-        pass
+    def try_print_error(self):
+        '''Prints the error message, if one is set, and resets the error_msg to None'''
+        if self.__error_msg is not None:
+            print(f"Error: {self.__error_msg}")
+            self.__error_msg = None
+
+    def set_error_msg(self, error_msg: str):
+        self.__error_msg = error_msg
 
     def __game_loop(self):
         # first phase (place ships)
@@ -36,19 +43,15 @@ class TerminalUI:
         
         print("Players! Place your ships")
         more_ships_to_place = True
-        error_msg: str = ""
         while more_ships_to_place:
             print(self.game.get_player1_boards()[0])
             print(self.game.get_player2_boards()[0])
-            if error_msg != "":
-                # implement a helper funciton to print error messages
-                print(f"Error: {error_msg}")
-                error_msg = ""
+            self.try_print_error()
 
             raw = input("Give the coordinates for the ship: ").strip()
             parts = raw.split()
             if (len(parts) < 2):
-                error_msg = "Two coordinates must be provided"
+                self.set_error_msg("Two coordinates must be provided")
                 continue
 
             try:
@@ -56,11 +59,11 @@ class TerminalUI:
                 y = int(parts[1])
                 ship_location = (x, y)
             except ValueError:
-                error_msg = "Invalid coordinates"
+                self.set_error_msg("Invalid coordinates")
                 continue
             ship_direction = input("Give the direction of the ship(up, dn, l, r): ").strip()
             if ship_direction not in ['up', 'dn', 'l', 'r']:
-                error_msg = "Invalid direction"
+                self.set_error_msg("Invalid direction")
                 continue;
 
             try: 
@@ -81,21 +84,19 @@ class TerminalUI:
             print(self.game.get_player2_boards()[0])
             print("Player 2 opponent's board:")
             print(self.game.get_player2_boards()[1])
-            if error_msg != "":
-                print(f"Error: {error_msg}")
-                error_msg = ""
+            self.try_print_error()
 
             raw = input("Give x and y (separated by space): ")
             parts: list[str] = raw.strip().split()
             if len(parts) != 2:
-                error_msg = "Invalid input"
+                self.set_error_msg("Invalid input")
                 continue
             
             try:
                 x = int(parts[0])
                 y = int(parts[1])
             except ValueError:
-                error_msg = "Invalid value for coordinates"
+                self.set_error_msg("Invalid value for coordinates")
                 continue
 
             result = self.game.try_hit(x, y)
