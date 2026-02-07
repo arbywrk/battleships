@@ -11,22 +11,26 @@ class TerminalUI:
 
     def __start_menu(self):
         print("Battleships")
-        print("1) Local 1v1")
-        # print("2) Host network game")
-        # print("3) Join network game")
-        choice = input("Choose mode: ")
-        if choice == '1':
-            self.__game_loop()
-        # ignore for now
-        # elif choice == '2':
-        #     port = int(input("Port to listen on (e.g. 65432): "))
-        #     NetworkSession.host(port, '🟦', '🟥')
-        # elif choice == '3':
-        #     host = input("Host IP: ")
-        #     port = int(input("Port: "))
-        #     NetworkSession.join(host, port, '🟦', '🟥')
-        else:
-            print("Unknown choice")
+        while True:
+            print("1) Local 1v1")
+            # print("2) Host network game")
+            # print("3) Join network game")
+            print("0) Exit")
+            choice = input("Choose mode: ")
+            if choice == '0':
+                break
+            elif choice == '1':
+                self.__game_loop()
+            # ignore for now
+            # elif choice == '2':
+            #     port = int(input("Port to listen on (e.g. 65432): "))
+            #     NetworkSession.host(port, '🟦', '🟥')
+            # elif choice == '3':
+            #     host = input("Host IP: ")
+            #     port = int(input("Port: "))
+            #     NetworkSession.join(host, port, '🟦', '🟥')
+            else:
+                print("Unknown choice")
 
     def try_print_error(self):
         '''Prints the error message, if one is set, and resets the error_msg to None'''
