@@ -1,5 +1,5 @@
 from .fleet import Fleet
-from .board import Board
+from .board import Board, BoardMatrix
 from .ship import Ship
 from enum import Enum
 
@@ -113,8 +113,8 @@ class Player:
             self.__opponent_board.set_symbol(x, y, 'X')
         # ignore unknown results
 
-    def get_player_board_printable(self) -> str:
-        return self.__player_board.get_printable()
+    def get_player_board_matrix(self) -> BoardMatrix:
+        return self.__player_board.get_board_matrix()
 
-    def get_opponent_board_printable(self) -> str:
-        return self.__opponent_board.get_printable()
+    def get_opponent_board_matrix(self) -> BoardMatrix:
+        return self.__opponent_board.get_board_matrix()

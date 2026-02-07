@@ -1,4 +1,7 @@
 import unicodedata
+from typing import TypeAlias
+
+BoardMatrix: TypeAlias = list[list[str]]
 
 class Board:
     def __init__(self, ship_symbol: str, size: int = 10):
@@ -43,8 +46,8 @@ class Board:
         return x >= 0 and x < len(self.__board) and \
                y >= 0 and y < len(self.__board[x])
 
-    def get_printable(self) -> str:
-        return self.__str__()
+    def get_board_matrix(self) -> BoardMatrix:
+        return self.__board
 
     def place_ship(self, x: int, y: int, direction: str, ship_length: int):
         """

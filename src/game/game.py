@@ -1,4 +1,6 @@
 from domain import Player, Fleet
+from domain.board import BoardMatrix
+
 
 class Game:
     def __init__(self, friendly_symbol: str, enemy_symbol: str, board_size: int = 10):
@@ -46,14 +48,14 @@ class Game:
             return True
         return False
 
-    def get_player1_boards(self) -> tuple[str,str]:
+    # TODO: instead of returning
+    def get_player1_boards_matrix(self) -> tuple[BoardMatrix, BoardMatrix]:
         """Return (player_board_printable, opponent_board_printable) for player1."""
-        return (self.__player1.get_player_board_printable(), 
-                self.__player1.get_opponent_board_printable())
+        return self.__player1.get_player_board_matrix(), self.__player1.get_opponent_board_matrix()
 
-    def get_player2_boards(self) -> tuple[str,str]:
+    def get_player2_boards_matrix(self) -> tuple[BoardMatrix, BoardMatrix]:
         """Return (player_board_printable, opponent_board_printable) for player2."""
-        return (self.__player2.get_player_board_printable(), self.__player2.get_opponent_board_printable())
+        return self.__player2.get_player_board_matrix(), self.__player2.get_opponent_board_matrix()
 
     def get_winner(self) -> int | None:
         """Return 1 if player1 won, 2 if player2 won, or None if no winner yet."""

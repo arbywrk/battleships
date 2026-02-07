@@ -1,6 +1,23 @@
 from game import Game
 # from net.session import NetworkSession
 
+from enum import StrEnum, auto
+
+class PrintingMode(StrEnum):
+    """Enum for printing modes"""
+    # Player's boards and the enemy's boards are placed one under another
+    ROW_MODE_ALL = auto()
+
+    # Player's boards and the enemy's boards are placed one after another
+    COLUMN_MODE_ALL = auto()
+
+    # Each player's own board are placed one under another
+    COLUMN_MODE_ONLY_PLAYERS = auto()
+
+    # Each player's opponent's board are placed one under another
+    COLUMN_MODE_ONLY_OPPONENTS = auto()
+
+
 class TerminalUI:
     def __init__(self, game: Game):
         self.game = game
@@ -41,15 +58,36 @@ class TerminalUI:
     def set_error_msg(self, error_msg: str):
         self.__error_msg = error_msg
 
+    def __print_boards(self, printing_mode: PrintingMode):
+        player1_boards = self.game.get_player1_boards_matrix()
+        player2_boards = self.game.get_player2_boards_matrix()
+
+
+        if printing_mode == PrintingMode.ROW_MODE_ALL:
+            print("Player 1 boards:")
+
+
+        print("Player 1 board:")
+        print()
+        print("Player 1 opponent's board:")
+        print(self.game.get_player1_boards_matrix()[1])
+        print("Player 2 board:")
+        print(self.game.get_player2_boards_matrix()[0])
+        print("Player 2 opponent's board:")
+        print(self.game.get_player2_boards_matrix()[1])
+        pass
+
     def __game_loop(self):
         # first phase (place ships)
         # for local mode we place ships for both players
-        
+
+        printing_setting: PrintingMode = PrintingMode.ROW_MODE_ALL
+
         print("Players! Place your ships")
         more_ships_to_place = True
         while more_ships_to_place:
-            print(self.game.get_player1_boards()[0])
-            print(self.game.get_player2_boards()[0])
+            # print the boards based on the printing mode
+            self.__print_boards(printing_setting)
             self.try_print_error()
 
             raw = input("Give the coordinates for the ship: ").strip()
@@ -80,14 +118,7 @@ class TerminalUI:
         game_over = False
         while not game_over:
             # TODO: implement error handleing for the game part (next time)
-            print("Player 1 board:")
-            print(self.game.get_player1_boards()[0])
-            print("Player 1 opponent's board:")
-            print(self.game.get_player1_boards()[1])
-            print("Player 2 board:")
-            print(self.game.get_player2_boards()[0])
-            print("Player 2 opponent's board:")
-            print(self.game.get_player2_boards()[1])
+            # TODO: readd board printing
             self.try_print_error()
 
             raw = input("Give x and y (separated by space): ")
@@ -107,8 +138,8 @@ class TerminalUI:
             print("Result:", result)
 
             # print boards for both players (for debug / local play)
-            p1_board, p1_opp = self.game.get_player1_boards()
-            p2_board, p2_opp = self.game.get_player2_boards()
+            p1_board, p1_opp = self.game.get_player1_boards_matrix()
+            p2_board, p2_opp = self.game.get_player2_boards_matrix()
             print("--- Player 1 board ---")
             print(p1_board)
             print("--- Player 1 view of opponent ---")
