@@ -3,14 +3,14 @@ from domain.board import BoardMatrix
 
 
 class Game:
-    def __init__(self, friendly_symbol: str, enemy_symbol: str, board_size: int = 10):
+    def __init__(self, board_size: int = 10):
         self.__is_running = False
         self.__first_player_turn = True
-        self.__setup(friendly_symbol, enemy_symbol, board_size)
+        self.__setup(board_size)
     
-    def __setup(self, friendly_symbol: str, enemy_symbol: str, board_size: int):
-        self.__player1 = Player(Fleet(), friendly_symbol, enemy_symbol, board_size)
-        self.__player2 = Player(Fleet(), friendly_symbol, enemy_symbol, board_size)
+    def __setup(self, board_size: int):
+        self.__player1 = Player(Fleet(), board_size)
+        self.__player2 = Player(Fleet(), board_size)
 
     def place_ship(self, ship_position: tuple[int, int], ship_direction: str) -> bool:
         """

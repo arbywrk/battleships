@@ -1,0 +1,2 @@
+class AlreadyHitException(Exception):
+    pass

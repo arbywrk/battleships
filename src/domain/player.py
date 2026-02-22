@@ -3,18 +3,11 @@ from .board import Board, BoardMatrix
 from .ship import Ship
 from enum import Enum
 
-# TODO: use direction enum
-# class Direction(Enum):
-#     UP = 'up'
-#     DOWN = 'down'
-#     RIGHT = 'right'
-#     LEFT = 'left'
-
 class Player:
-    def __init__(self, fleet: Fleet, friedly_ship_symbol: str, enemy_ship_symbol: str, board_size: int):
+    def __init__(self, fleet: Fleet, board_size: int):
         self.__fleet = fleet
-        self.__player_board = Board(friedly_ship_symbol, board_size)
-        self.__opponent_board = Board(enemy_ship_symbol, board_size)
+        self.__player_board = Board(board_size)
+        self.__opponent_board = Board(board_size)
         self.__all_ships_placed = False
         self.__idx_of_next_ship_to_place = 0
         # map coordinates (x,y) -> Ship (for hits)

@@ -1,3 +1,6 @@
+import unicodedata
+
+from domain.board import BoardMatrix
 from game import Game
 # from net.session import NetworkSession
 
@@ -19,9 +22,19 @@ class PrintingMode(StrEnum):
 
 
 class TerminalUI:
-    def __init__(self, game: Game):
+    def __init__(self, game: Game, player1_ship_symbol: str, player2_ship_symbol: str):
         self.game = game
         self.__error_msg: str | None = None
+
+        self.__player1_ship_symbol = player1_ship_symbol
+        self.__player2_ship_symbol = player2_ship_symbol
+
+    @staticmethod
+    def get_ship_symbol_width(ship_symbol: str) -> int:
+        for ch in ship_symbol:
+            ch_is_emoji: bool = unicodedata.east_asian_width(ch) == 'W'
+            return 2 if ch_is_emoji else 1
+        return 0
 
     def start(self):
         self.__start_menu()
@@ -58,24 +71,39 @@ class TerminalUI:
     def set_error_msg(self, error_msg: str):
         self.__error_msg = error_msg
 
+    @staticmethod
+    def __printable_board(board_matrix: BoardMatrix, ship_symbol):
+        fmt_board = ''
+        ship_symbol_w = TerminalUI.get_ship_symbol_width(ship_symbol)
+        border = "-" * (len(board_matrix[0]) * (ship_symbol_w + 4))
+
+        fmt_row = ''
+        for row in board_matrix:
+            fmt_row = '|' + str(row)[1:-1].replace(', ', '|').replace("'", " ") + '|'
+
+        fmt_board += f'{border}\n{fmt_row}\n'
+        fmt_board += border + '\n'
+        return fmt_board
+
     def __print_boards(self, printing_mode: PrintingMode):
         player1_boards = self.game.get_player1_boards_matrix()
         player2_boards = self.game.get_player2_boards_matrix()
 
-
+        if printing_mode == PrintingMode.COLUMN_MODE_ALL:
+            # TODO: complete
+            pass
         if printing_mode == PrintingMode.ROW_MODE_ALL:
-            print("Player 1 boards:")
-
+            # TODO: complete
+            pass
 
         print("Player 1 board:")
-        print()
+        print(player1_boards[0])
         print("Player 1 opponent's board:")
-        print(self.game.get_player1_boards_matrix()[1])
+        print(player1_boards[1])
         print("Player 2 board:")
-        print(self.game.get_player2_boards_matrix()[0])
+        print(player2_boards[0])
         print("Player 2 opponent's board:")
-        print(self.game.get_player2_boards_matrix()[1])
-        pass
+        print(player2_boards[1])
 
     def __game_loop(self):
         # first phase (place ships)
@@ -106,7 +134,7 @@ class TerminalUI:
             ship_direction = input("Give the direction of the ship(up, dn, l, r): ").strip()
             if ship_direction not in ['up', 'dn', 'l', 'r']:
                 self.set_error_msg("Invalid direction")
-                continue;
+                continue
 
             try: 
                 more_ships_to_place = self.game.place_ship(ship_location, ship_direction)

@@ -1,21 +1,27 @@
-import unicodedata
+from enum import IntEnum, StrEnum, auto
 from typing import TypeAlias
+from domain.execptions import AlreadyHitException
 
-BoardMatrix: TypeAlias = list[list[str]]
+class ShipDirection(StrEnum):
+    UP = auto()
+    DOWN = auto()
+    LEFT = auto()
+    RIGHT = auto()
+
+class CellValue(IntEnum):
+    EMPTY = 0
+    SHIP = 1
+    HIT = 2
+    MISS = 3
+
+BoardMatrix: TypeAlias = list[list[CellValue]]
 
 class Board:
-    def __init__(self, ship_symbol: str, size: int = 10):
+    def __init__(self, size: int = 10):
         if type(size) is not int:
             raise Exception("ERROR: size must be an integer")
-
-        self.__ship_symbol_w = 0
-        for ch in ship_symbol:
-            ch_is_emoji: bool = unicodedata.east_asian_width(ch) == 'W'
-            self.__ship_symbol_w += 2 if ch_is_emoji else 1
-
-        self.__empty_symbol = ' ' * self.__ship_symbol_w
-        self.__ship_symbol = ship_symbol
-        self.__board = [[self.__empty_symbol for _ in range(size)] for _ in range(size)]
+        self.__size = size
+        self.__board: BoardMatrix = [[CellValue.EMPTY for _ in range(size)] for _ in range(size)]
     
     def __is_empty_square(self, x: int, y: int) -> bool:
         """
@@ -29,7 +35,10 @@ class Board:
         :return: True if the square is empty, False otherwise 
         :rtype: bool
         """
-        return self.__board[x][y] == self.__empty_symbol
+        if not self.__is_valid_square(x, y):
+            raise Exception("Invalid position")
+
+        return self.__board[x][y] == CellValue.EMPTY
 
     def __is_valid_square(self, x: int, y: int) -> bool:
         """
@@ -43,45 +52,39 @@ class Board:
         :return: True if the square is valid, False otherwise
         :rtype: bool
         """
-        return x >= 0 and x < len(self.__board) and \
-               y >= 0 and y < len(self.__board[x])
+        return 0 <= x < self.__size and 0 <= y < self.__size
 
     def get_board_matrix(self) -> BoardMatrix:
         return self.__board
 
-    def place_ship(self, x: int, y: int, direction: str, ship_length: int):
-        """
-        Places the ship in the board.
-        
-        :param self: class instance
-        :param x: the x coordinate of the ship's head
-        :param y: the y coordinate of the ship's head
-        :param direction: direction of the ship's tail
-        :raises Exception: if the ship can't be placed on the given position
-        """
+    def place_ship(self, x: int, y: int, direction: ShipDirection, ship_length: int):
+        """Places the ship in the board."""
+
+        if ship_length <= 0:
+            raise Exception("Invalid Ship length")
 
         # check if the head can be placed
         if not self.__is_valid_square(x, y) or \
            not self.__is_empty_square(x, y):
-            raise Exception("Can't place ship on given postion")
+            raise Exception("Can't place ship on given position")
         
         # check if the rest of the ship can be placed 
-        if direction == "l":
+        if direction == ShipDirection.LEFT:
             for i in range(1, ship_length):
                 if not self.__is_valid_square(x, y - i) or \
                    not self.__is_empty_square(x, y - i):
                     raise Exception("Can't place ship in the given direction")
-        elif direction == "r":
+        elif direction == ShipDirection.RIGHT:
             for i in range(1, ship_length):
                 if not self.__is_valid_square(x, y + i) or \
                    not self.__is_empty_square(x, y + i):
                     raise Exception("Can't place ship in the given direction")
-        elif direction == "up":
+        elif direction == ShipDirection.UP:
             for i in range(1, ship_length):
                 if not self.__is_valid_square(x - i, y) or \
                    not self.__is_empty_square(x - i, y):
                     raise Exception("Can't place ship in the given direction")
-        elif direction == "dn":
+        elif direction == ShipDirection.DOWN:
             for i in range(1, ship_length):
                 if not self.__is_valid_square(x + i, y) or \
                    not self.__is_empty_square(x + i, y):
@@ -90,73 +93,50 @@ class Board:
             raise Exception("Invalid Direction")
 
         # mark the place were the ship is placed
-        self.__board[x][y] = self.__ship_symbol
+        self.__board[x][y] = CellValue.SHIP
         if direction == "l":
             for i in range(1, ship_length):
-                self.__board[x][y - i] = self.__ship_symbol
+                self.__board[x][y - i] = CellValue.SHIP
         elif direction == "r":
             for i in range(1, ship_length):
-                self.__board[x][y + i] = self.__ship_symbol
+                self.__board[x][y + i] = CellValue.SHIP
         elif direction == "up":
             for i in range(1, ship_length):
-                self.__board[x - i][y] = self.__ship_symbol
+                self.__board[x - i][y] = CellValue.SHIP
         elif direction == "dn":
             for i in range(1, ship_length):
-                self.__board[x + i][y] = self.__ship_symbol
+                self.__board[x + i][y] = CellValue.SHIP
 
-    def _pad_symbol(self, ch: str) -> str:
-        """Return a symbol padded to the ship symbol width."""
-        base = ch
-        # pad with spaces to match ship symbol width
-        if len(base) < self.__ship_symbol_w:
-            base = base + ' ' * (self.__ship_symbol_w - len(base))
-        return base
-
-    def get_symbol(self, x: int, y: int) -> str:
+    def get_cell_value(self, x: int, y: int) -> CellValue:
         if not self.__is_valid_square(x, y):
-            raise IndexError("Invalid board coordinates")
+            raise IndexError("Invalid coordinates")
         return self.__board[x][y]
 
-    def set_symbol(self, x: int, y: int, symbol: str):
+    def set_cell_value(self, x: int, y: int, value: CellValue):
         if not self.__is_valid_square(x, y):
             raise IndexError("Invalid board coordinates")
-        self.__board[x][y] = self._pad_symbol(symbol)
+        self.__board[x][y] = value
 
-    def try_hit(self, x, y) -> str:
-        """Apply a hit on the board and return the result: 'miss' or 'hit'.
 
-        Raises IndexError for invalid coordinates and returns 'already' if the
-        square was already targeted.
-        """
-        # TODO: use an enum
-        # TODO: throw errors
+    def try_hit(self, x, y) -> CellValue:
         if not self.__is_valid_square(x, y):
             raise IndexError("Invalid board coordinates")
 
         current = self.__board[x][y]
-        # Already targeted markers: an 'X' for hit or '.' for miss (padded)
-        if current.strip() in ['X', '.']:
-            return 'already'
 
-        if current == self.__empty_symbol:
-            # miss
-            self.__board[x][y] = self._pad_symbol('.')
-            return 'miss'
-        elif current == self.__ship_symbol:
-            # hit
-            self.__board[x][y] = self._pad_symbol('X')
-            return 'hit'
+        if current in [CellValue.HIT, CellValue.MISS]:
+            raise AlreadyHitException
+
+        if current == CellValue.EMPTY:
+            self.__board[x][y] = CellValue.MISS
+            return CellValue.MISS
+        elif current == CellValue.SHIP:
+            self.__board[x][y] = CellValue.HIT
+            return CellValue.HIT
         else:
             # Shouldn't happen but treat as miss
-            self.__board[x][y] = self._pad_symbol('.')
-            return 'miss'
+            self.__board[x][y] = CellValue.MISS
+            return CellValue.MISS
 
     def __str__(self) -> str:
-        fmt_board = ''
-        border = "-" * (len(self.__board[0]) * (3 + self.__ship_symbol_w) + 1)
-        for row in self.__board:
-            fmt_row = '|' + str(row)[1:-1].replace(', ', '|').replace("'", " ") + '|'
-            fmt_board += f'{border}\n{fmt_row}\n'
-        fmt_board += border + '\n'
-        return fmt_board
-
+        return self.__board.__str__()
