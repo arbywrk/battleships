@@ -1,6 +1,7 @@
 import unicodedata
 
-from domain.board import BoardMatrix
+from domain.board import BoardMatrix, CellValue
+from domain.symbol import Symbols
 from game import Game
 # from net.session import NetworkSession
 
@@ -22,15 +23,15 @@ class PrintingMode(StrEnum):
 
 
 class TerminalUI:
-    def __init__(self, game: Game, player1_ship_symbol: str, player2_ship_symbol: str):
+    def __init__(self, game: Game, friendly_symbols: Symbols, enemy_symbols: Symbols):
         self.game = game
         self.__error_msg: str | None = None
 
-        self.__player1_ship_symbol = player1_ship_symbol
-        self.__player2_ship_symbol = player2_ship_symbol
+        self.__friendly_symbols = friendly_symbols
+        self.__enemy_symbols = enemy_symbols
 
     @staticmethod
-    def get_ship_symbol_width(ship_symbol: str) -> int:
+    def __get_ship_symbol_width(ship_symbol: str) -> int:
         for ch in ship_symbol:
             ch_is_emoji: bool = unicodedata.east_asian_width(ch) == 'W'
             return 2 if ch_is_emoji else 1
@@ -72,16 +73,37 @@ class TerminalUI:
         self.__error_msg = error_msg
 
     @staticmethod
-    def __printable_board(board_matrix: BoardMatrix, ship_symbol):
+    def __printable_board(board_matrix: BoardMatrix, symbols: Symbols) -> str:
+        # TODO: implement the entire function for next time
+        # TODO EXTRA: make printing work
+        max_symbol_width = symbols.max_symbol_width
+        border = "-" * (len(board_matrix[0]) * (max_symbol_width + 4))
+
         fmt_board = ''
-        ship_symbol_w = TerminalUI.get_ship_symbol_width(ship_symbol)
-        border = "-" * (len(board_matrix[0]) * (ship_symbol_w + 4))
-
-        fmt_row = ''
         for row in board_matrix:
-            fmt_row = '|' + str(row)[1:-1].replace(', ', '|').replace("'", " ") + '|'
+            fmt_row = ''
+            for cell in row:
+                # last implementation: fmt_row = '|' + str(row)[1:-1].replace(', ', '|').replace("'", " ") + '|'
+                symbol: str = ''
+                padding: str = ''
+                # you must calculate the padding needed for each value and place its corresponding
+                # symbol in the fmt row
+                if cell is CellValue.SHIP:
+                    symbol = symbols.ship
+                    # padding = ...
+                if cell is CellValue.MISS:
+                    pass
+                if cell is CellValue.HIT:
+                    pass
+                if cell is CellValue.MISS:
+                    pass
 
-        fmt_board += f'{border}\n{fmt_row}\n'
+                # uncomment and complete this line
+                # fmt_row += '|' +
+                pass
+            fmt_board += f'{border}\n{fmt_row}\n'
+
+
         fmt_board += border + '\n'
         return fmt_board
 
@@ -90,26 +112,23 @@ class TerminalUI:
         player2_boards = self.game.get_player2_boards_matrix()
 
         if printing_mode == PrintingMode.COLUMN_MODE_ALL:
+            print("Player 1 board:")
+            print(TerminalUI.__printable_board(player1_boards[0], self.__friendly_symbols))
+            print("Player 1 opponent's board:")
+            print(TerminalUI.__printable_board(player1_boards[1], self.__enemy_symbols))
+            print("Player 2 board:")
+            print(TerminalUI.__printable_board(player2_boards[0], self.__friendly_symbols))
+            print("Player 2 opponent's board:")
+            print(TerminalUI.__printable_board(player2_boards[1], self.__enemy_symbols))
+        elif printing_mode == PrintingMode.ROW_MODE_ALL:
             # TODO: complete
             pass
-        if printing_mode == PrintingMode.ROW_MODE_ALL:
-            # TODO: complete
-            pass
-
-        print("Player 1 board:")
-        print(player1_boards[0])
-        print("Player 1 opponent's board:")
-        print(player1_boards[1])
-        print("Player 2 board:")
-        print(player2_boards[0])
-        print("Player 2 opponent's board:")
-        print(player2_boards[1])
 
     def __game_loop(self):
         # first phase (place ships)
         # for local mode we place ships for both players
 
-        printing_setting: PrintingMode = PrintingMode.ROW_MODE_ALL
+        printing_setting: PrintingMode = PrintingMode.COLUMN_MODE_ALL
 
         print("Players! Place your ships")
         more_ships_to_place = True
@@ -120,7 +139,7 @@ class TerminalUI:
 
             raw = input("Give the coordinates for the ship: ").strip()
             parts = raw.split()
-            if (len(parts) < 2):
+            if len(parts) < 2:
                 self.set_error_msg("Two coordinates must be provided")
                 continue
 
@@ -166,6 +185,7 @@ class TerminalUI:
             print("Result:", result)
 
             # print boards for both players (for debug / local play)
+            # TODO: switch to the __print_board method
             p1_board, p1_opp = self.game.get_player1_boards_matrix()
             p2_board, p2_opp = self.game.get_player2_boards_matrix()
             print("--- Player 1 board ---")
