@@ -92,18 +92,18 @@ class Board:
         else:
             raise Exception("Invalid Direction")
 
-        # mark the place were the ship is placed
+        # mark the places where the ship sits
         self.__board[x][y] = CellValue.SHIP
-        if direction == "l":
+        if direction == ShipDirection.LEFT:
             for i in range(1, ship_length):
                 self.__board[x][y - i] = CellValue.SHIP
-        elif direction == "r":
+        elif direction == ShipDirection.RIGHT:
             for i in range(1, ship_length):
                 self.__board[x][y + i] = CellValue.SHIP
-        elif direction == "up":
+        elif direction == ShipDirection.UP:
             for i in range(1, ship_length):
                 self.__board[x - i][y] = CellValue.SHIP
-        elif direction == "dn":
+        elif direction == ShipDirection.DOWN:
             for i in range(1, ship_length):
                 self.__board[x + i][y] = CellValue.SHIP
 
