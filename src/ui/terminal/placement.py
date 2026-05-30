@@ -77,7 +77,7 @@ class ShipPlacementUI:
         print("\033[H\033[J", end="")
         print("=== Place Your Ships ===")
         print(f"\nPlayer {player_num} - place your ship (size {ship_size})")
-        print(f"Head: row {self.__cursor.row}, col {self.__cursor.col}; direction: {self.__cursor.direction}")
+        print(f"Head: row {self.__cursor.row + 1}, col {self.__cursor.col + 1}; direction: {self.__cursor.direction}")
         print("Move with arrow keys, rotate with r, place with Enter.")
         if self.__message is not None:
             print(f"Error: {self.__message}")

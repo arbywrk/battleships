@@ -35,8 +35,8 @@ class BoardRenderer:
         size = len(board_matrix)
         overlay = overlay or {}
         overlay_width = max((Symbols.symbol_width(symbol) for symbol in overlay.values()), default=0)
-        cell_width = max(symbols.max_symbol_width, len(str(size - 1)), overlay_width)
-        row_label_width = len(str(size - 1))
+        cell_width = max(symbols.max_symbol_width, len(str(size)), overlay_width)
+        row_label_width = len(str(size))
 
         lines = []
         if title:
@@ -46,7 +46,7 @@ class BoardRenderer:
         left_padding = "" if compact else " "
         right_padding = "" if compact else " "
 
-        header_cells = [f"{left_padding}{i:>{cell_width}}{right_padding}" for i in range(size)]
+        header_cells = [f"{left_padding}{i:>{cell_width}}{right_padding}" for i in range(1, size + 1)]
         header = " " * (row_label_width + 1) + "|" + "|".join(header_cells) + "|"
         border = "-" * (row_label_width + 1) + "+" + "+".join("-" * (cell_width + cell_padding) for _ in range(size)) + "+"
         lines.append(header)
@@ -60,7 +60,7 @@ class BoardRenderer:
                     symbol = BoardRenderer.__cell_symbol(cell, symbols)
                 symbol += " " * (cell_width - Symbols.symbol_width(symbol))
                 cells.append(f"{left_padding}{symbol}{right_padding}")
-            lines.append(f"{row_idx:>{row_label_width}} |" + "|".join(cells) + "|")
+            lines.append(f"{row_idx + 1:>{row_label_width}} |" + "|".join(cells) + "|")
             lines.append(border)
 
         return "\n".join(lines)
