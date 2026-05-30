@@ -1,8 +1,6 @@
-import os
-
 from domain.board import BoardMatrix, CellValue
-from domain.symbol import Symbols
 from domain.shot_result import ShotResult
+from domain.symbol import Symbols
 from game import Game
 from settings import Settings
 
@@ -33,15 +31,18 @@ class TerminalUI:
     @staticmethod
     def __printable_board(board_matrix: BoardMatrix, symbols: Symbols, title: str = "") -> str:
         size = len(board_matrix)
-        w = symbols.max_symbol_width
+        cell_width = max(symbols.max_symbol_width, len(str(size - 1)))
+        row_label_width = len(str(size - 1))
 
         lines = []
         if title:
             lines.append(title)
 
-        # Column numbers header, right-aligned to match symbol width
-        header = "   " + " ".join(f"{i:>{w}}" for i in range(size))
+        header_cells = [f" {i:>{cell_width}} " for i in range(size)]
+        header = " " * (row_label_width + 1) + "|" + "|".join(header_cells) + "|"
+        border = "-" * (row_label_width + 1) + "+" + "+".join("-" * (cell_width + 2) for _ in range(size)) + "+"
         lines.append(header)
+        lines.append(border)
 
         for row_idx, row in enumerate(board_matrix):
             cells = []
@@ -54,11 +55,11 @@ class TerminalUI:
                     symbol = symbols.hit
                 else:  # MISS
                     symbol = symbols.miss
-                # Pad to max symbol width so columns stay aligned
                 sym_width = Symbols.symbol_width(symbol)
-                symbol += " " * (w - sym_width)
-                cells.append(symbol)
-            lines.append(f"{row_idx:>2} " + " ".join(cells))
+                symbol += " " * (cell_width - sym_width)
+                cells.append(f" {symbol} ")
+            lines.append(f"{row_idx:>{row_label_width}} |" + "|".join(cells) + "|")
+            lines.append(border)
 
         return "\n".join(lines)
 
@@ -94,7 +95,7 @@ class TerminalUI:
             player_num = self.__game.get_current_player_number()
             ship_size = self.__game.get_next_ship_size()
 
-            print(f"\nPlayer {player_num} — place your ship (size {ship_size})")
+            print(f"\nPlayer {player_num} - place your ship (size {ship_size})")
             self.__print_placement_board(player_num)
             print()
             self.__print_error()
@@ -102,7 +103,7 @@ class TerminalUI:
             raw = input("Row  Col  Direction (up/down/left/right): ").strip()
             parts = raw.split()
             if len(parts) < 3:
-                self.__error_msg = "Provide row, col, and direction — e.g. '0 0 right'"
+                self.__error_msg = "Provide row, col, and direction - e.g. '0 0 right'"
                 continue
 
             try:
