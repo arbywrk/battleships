@@ -29,14 +29,36 @@ class TerminalUI:
             else:
                 print("Invalid choice, try again.")
 
-    def __print_battle_boards(self, player_num: int):
-        if player_num == 1:
-            own_board, opp_board = self.__game.get_player1_boards_matrix()
-        else:
-            own_board, opp_board = self.__game.get_player2_boards_matrix()
-        print(BoardRenderer.printable_board(own_board, self.__settings.friendly_symbols, "Your board:"))
-        print()
-        print(BoardRenderer.printable_board(opp_board, self.__settings.enemy_symbols, "Opponent's board:"))
+    def __print_battle_boards(self):
+        player1_own_board, player1_opp_board = self.__game.get_player1_boards_matrix()
+        player2_own_board, player2_opp_board = self.__game.get_player2_boards_matrix()
+
+        player1_own = BoardRenderer.printable_board(
+            player1_own_board,
+            self.__settings.friendly_symbols,
+            "Player 1:",
+            compact=self.__settings.compact_board_rendering,
+        )
+        player1_opp = BoardRenderer.printable_board(
+            player1_opp_board,
+            self.__settings.enemy_symbols,
+            "Player 1 opponent:",
+            compact=self.__settings.compact_board_rendering,
+        )
+        player2_own = BoardRenderer.printable_board(
+            player2_own_board,
+            self.__settings.friendly_symbols,
+            "Player 2:",
+            compact=self.__settings.compact_board_rendering,
+        )
+        player2_opp = BoardRenderer.printable_board(
+            player2_opp_board,
+            self.__settings.enemy_symbols,
+            "Player 2 opponent:",
+            compact=self.__settings.compact_board_rendering,
+        )
+
+        print(BoardRenderer.grid(player1_opp, player2_opp, player1_own, player2_own))
 
     def __print_error(self):
         if self.__error_msg is not None:
@@ -48,7 +70,11 @@ class TerminalUI:
         self.__battle_phase()
 
     def __placement_phase(self):
-        placement_ui = ShipPlacementUI(self.__game, self.__settings.friendly_symbols)
+        placement_ui = ShipPlacementUI(
+            self.__game,
+            self.__settings.friendly_symbols,
+            self.__settings.compact_board_rendering,
+        )
         more_ships = True
         while more_ships:
             player_num = self.__game.get_current_player_number()
@@ -64,7 +90,7 @@ class TerminalUI:
         while not self.__game.game_over():
             player_num = self.__game.get_current_player_number()
             print(f"\nPlayer {player_num}'s turn")
-            self.__print_battle_boards(player_num)
+            self.__print_battle_boards()
             print()
             self.__print_error()
 

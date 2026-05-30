@@ -29,17 +29,20 @@ DIRECTION_DELTAS = {
 
 
 class ShipPlacementUI:
-    def __init__(self, game: Game, symbols: Symbols):
+    def __init__(self, game: Game, friendly_symbols: Symbols, compact_board_rendering: bool):
         self.__game = game
-        self.__symbols = symbols
+        self.__friendly_symbols = friendly_symbols
+        self.__compact_board_rendering = compact_board_rendering
         self.__cursor = PlacementCursor()
         self.__message: str | None = None
 
     def place_next_ship(self, player_num: int, ship_size: int) -> bool:
+        own_board = self.__get_player_board(player_num)
+        self.__reset_cursor(own_board, ship_size)
+
         with raw_terminal():
             while True:
-                board = self.__get_player_board(player_num)
-                self.__render(player_num, ship_size, board)
+                self.__render(player_num, ship_size)
                 key = read_key()
 
                 if key == Key.ENTER:
@@ -65,7 +68,12 @@ class ShipPlacementUI:
             board, _ = self.__game.get_player2_boards_matrix()
         return board
 
-    def __render(self, player_num: int, ship_size: int, board: BoardMatrix):
+    def __render(self, player_num: int, ship_size: int):
+        player1_board, _ = self.__game.get_player1_boards_matrix()
+        player2_board, _ = self.__game.get_player2_boards_matrix()
+        player1_overlay = self.__preview_overlay(player1_board, ship_size) if player_num == 1 else None
+        player2_overlay = self.__preview_overlay(player2_board, ship_size) if player_num == 2 else None
+
         print("\033[H\033[J", end="")
         print("=== Place Your Ships ===")
         print(f"\nPlayer {player_num} - place your ship (size {ship_size})")
@@ -77,7 +85,21 @@ class ShipPlacementUI:
         else:
             print()
         print()
-        print(BoardRenderer.printable_board(board, self.__symbols, overlay=self.__preview_overlay(board, ship_size)))
+        player1_render = BoardRenderer.printable_board(
+            player1_board,
+            self.__friendly_symbols,
+            "Player 1:",
+            overlay=player1_overlay,
+            compact=self.__compact_board_rendering,
+        )
+        player2_render = BoardRenderer.printable_board(
+            player2_board,
+            self.__friendly_symbols,
+            "Player 2:",
+            overlay=player2_overlay,
+            compact=self.__compact_board_rendering,
+        )
+        print(BoardRenderer.side_by_side(player1_render, player2_render))
 
     def __preview_overlay(self, board: BoardMatrix, ship_size: int) -> dict[tuple[int, int], str]:
         overlay = {}
@@ -86,6 +108,27 @@ class ShipPlacementUI:
             if 0 <= row < size and 0 <= col < size:
                 overlay[(row, col)] = "@" if board[row][col] == CellValue.EMPTY else "!"
         return overlay
+
+    def __reset_cursor(self, board: BoardMatrix, ship_size: int):
+        for row in range(len(board)):
+            for col in range(len(board)):
+                for direction_idx, direction in enumerate(DIRECTIONS):
+                    if self.__can_place_at(board, row, col, direction, ship_size):
+                        self.__cursor = PlacementCursor(row, col, direction_idx)
+                        return
+        self.__cursor = PlacementCursor()
+
+    def __can_place_at(self, board: BoardMatrix, row: int, col: int, direction: str, ship_size: int) -> bool:
+        size = len(board)
+        row_delta, col_delta = DIRECTION_DELTAS[direction]
+        for offset in range(ship_size):
+            cell_row = row + row_delta * offset
+            cell_col = col + col_delta * offset
+            if not (0 <= cell_row < size and 0 <= cell_col < size):
+                return False
+            if board[cell_row][cell_col] != CellValue.EMPTY:
+                return False
+        return True
 
     def __ship_cells(self, ship_size: int) -> list[tuple[int, int]]:
         row_delta, col_delta = DIRECTION_DELTAS[self.__cursor.direction]
