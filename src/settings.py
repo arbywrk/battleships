@@ -2,12 +2,16 @@ from dataclasses import dataclass, field
 from domain.symbol import Symbols
 
 
+def default_friendly_symbols() -> Symbols:
+    return Symbols(' ', '🟦', '*', 'X')
+
+
+def default_enemy_symbols() -> Symbols:
+    return Symbols(' ', '🟥', '*', 'X')
+
+
 @dataclass
 class Settings:
     board_size: int = 10
-    friendly_symbols: Symbols = field(default_factory=lambda: Symbols(' ', '🟦', '*', 'X'))
-    enemy_symbols: Symbols = field(default_factory=lambda: Symbols(' ', '🟥', '*', 'X'))
-
-    # Future network settings would go here:
-    # host: str = 'localhost'
-    # port: int = 65432
+    friendly_symbols: Symbols = field(default_factory=default_friendly_symbols)
+    enemy_symbols: Symbols = field(default_factory=default_enemy_symbols)
