@@ -1,29 +1,26 @@
-# TODO: ADD decorators (later on)
-
 class Ship:
-    """Impletes the ship class for the battleships game. """
-    def __init__(self, size: int):
-        if type(size) is not int:
-            raise Exception("ERROR: size must be an integer")
+    """A ship that can be hit until all of its cells are destroyed."""
 
-        self.__size = size
-        self.__is_destroyed = False
+    def __init__(self, size: int) -> None:
+        if not isinstance(size, int):
+            raise TypeError("Ship size must be an integer")
+        if size <= 0:
+            raise ValueError("Ship size must be positive")
+
+        self.__size: int = size
+        self.__remaining_health: int = size
 
     def get_size(self) -> int:
+        """Return the original ship size used during placement."""
         return self.__size
 
     def is_destroyed(self) -> bool:
-        return self.__is_destroyed
+        """Return True when this ship has no health left."""
+        return self.__remaining_health == 0
 
-    def hit(self):
-        if self.__size == 0:
-            return # TODO: convert to error
+    def hit(self) -> None:
+        """Remove one health point from the ship."""
+        if self.__remaining_health == 0:
+            return
 
-        self.__size -= 1
-
-        if self.__size == 0:
-            self.__destroy()
-
-    def __destroy(self):
-        self.__is_destroyed = True
-
+        self.__remaining_health -= 1

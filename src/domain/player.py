@@ -1,90 +1,109 @@
+from .board import Board, BoardMatrix, BoardPosition, CellValue, ShipDirection
+from .execptions import AlreadyHitException
 from .fleet import Fleet
-from .board import Board, BoardMatrix, CellValue, ShipDirection
 from .ship import Ship
 from .shot_result import ShotResult
-from .execptions import AlreadyHitException
 
 
 class Player:
-    def __init__(self, fleet: Fleet, board_size: int):
-        self.__fleet = fleet
-        self.__player_board = Board(board_size)
-        self.__opponent_board = Board(board_size)
-        self.__all_ships_placed = False
-        self.__idx_of_next_ship_to_place = 0
-        self.__ship_positions: dict[tuple[int, int], Ship] = {}
+    """Stores one player's fleet and both boards they can see."""
 
-    def __place_ship(self, x: int, y: int, direction: str, ship: Ship):
-        self.__player_board.place_ship(x, y, direction, ship.get_size())
+    def __init__(self, fleet: Fleet, board_size: int) -> None:
+        self.__fleet: Fleet = fleet
+        self.__player_board: Board = Board(board_size)
+        self.__opponent_board: Board = Board(board_size)
+        self.__all_ships_placed: bool = False
+        self.__next_ship_index: int = 0
+        self.__ship_by_position: dict[BoardPosition, Ship] = {}
 
-        self.__ship_positions[(x, y)] = ship
-        if direction == ShipDirection.LEFT:
-            for i in range(1, ship.get_size()):
-                self.__ship_positions[(x, y - i)] = ship
-        elif direction == ShipDirection.RIGHT:
-            for i in range(1, ship.get_size()):
-                self.__ship_positions[(x, y + i)] = ship
-        elif direction == ShipDirection.UP:
-            for i in range(1, ship.get_size()):
-                self.__ship_positions[(x - i, y)] = ship
-        elif direction == ShipDirection.DOWN:
-            for i in range(1, ship.get_size()):
-                self.__ship_positions[(x + i, y)] = ship
-
-    def place_ship(self, ship_position: tuple[int, int], ship_direction: str):
-        """Places the next ship in the fleet on the player's board."""
+    def place_ship(self, ship_position: BoardPosition, ship_direction: str) -> None:
+        """Place the next unplaced ship in this player's fleet."""
         if self.__all_ships_placed:
-            raise Exception("All ships were already placed")
+            raise ValueError("All ships were already placed")
 
-        ship = self.__fleet.get_ships()[self.__idx_of_next_ship_to_place]
-        self.__place_ship(ship_position[0], ship_position[1], ship_direction, ship)
+        ship: Ship = self.__fleet.get_ships()[self.__next_ship_index]
+        direction: ShipDirection = ShipDirection(ship_direction)
+        start_row, start_column = ship_position
 
-        self.__idx_of_next_ship_to_place += 1
-        if self.__idx_of_next_ship_to_place == len(self.__fleet.get_ships()):
-            self.__all_ships_placed = True
+        self.__player_board.place_ship(start_row, start_column, direction, ship.get_size())
+        self.__remember_ship_positions(start_row, start_column, direction, ship)
+        self.__move_to_next_ship()
 
     def all_ships_placed(self) -> bool:
+        """Return True when this player has placed every ship."""
         return self.__all_ships_placed
 
     def get_next_ship_size(self) -> int | None:
+        """Return the size of the next ship that must be placed."""
         if self.__all_ships_placed:
             return None
-        return self.__fleet.get_ships()[self.__idx_of_next_ship_to_place].get_size()
+        return self.__fleet.get_ships()[self.__next_ship_index].get_size()
 
     def has_undestroyed_ships(self) -> bool:
+        """Return True while at least one ship still has health left."""
         return not self.__fleet.destroyed()
 
-    def receive_fire(self, x: int, y: int) -> ShotResult:
-        """Process incoming fire on this player's board and return the result."""
+    def receive_fire(self, row: int, column: int) -> ShotResult:
+        """Apply a shot to this player's own board."""
         try:
-            result = self.__player_board.try_hit(x, y)
+            cell_hit_result: CellValue = self.__player_board.try_hit(row, column)
         except AlreadyHitException:
             return ShotResult.ALREADY_HIT
 
-        if result == CellValue.MISS:
+        if cell_hit_result == CellValue.MISS:
             return ShotResult.MISS
 
-        if result == CellValue.HIT:
-            ship: Ship | None = self.__ship_positions.get((x, y), None)
-            if ship is not None:
-                ship.hit()
-                if ship.is_destroyed():
-                    if self.__fleet.destroyed():
-                        return ShotResult.WIN
-                    return ShotResult.SUNK
-            return ShotResult.HIT
+        return self.__handle_ship_hit(row, column)
 
-        return ShotResult.MISS
-
-    def mark_opponent_board(self, x: int, y: int, result: ShotResult):
-        """Update the local view of the opponent's board."""
+    def mark_opponent_board(self, row: int, column: int, result: ShotResult) -> None:
+        """Update this player's view of the opponent's board after firing."""
         if result == ShotResult.MISS:
-            self.__opponent_board.set_cell_value(x, y, CellValue.MISS)
+            self.__opponent_board.set_cell_value(row, column, CellValue.MISS)
         elif result in (ShotResult.HIT, ShotResult.SUNK, ShotResult.WIN):
-            self.__opponent_board.set_cell_value(x, y, CellValue.HIT)
+            self.__opponent_board.set_cell_value(row, column, CellValue.HIT)
 
     def get_player_board_matrix(self) -> BoardMatrix:
+        """Return this player's own board."""
         return self.__player_board.get_board_matrix()
 
     def get_opponent_board_matrix(self) -> BoardMatrix:
+        """Return what this player knows about the opponent's board."""
         return self.__opponent_board.get_board_matrix()
+
+    def __remember_ship_positions(
+        self,
+        start_row: int,
+        start_column: int,
+        direction: ShipDirection,
+        ship: Ship,
+    ) -> None:
+        """Remember which ship is located at each occupied cell."""
+        ship_cells: list[BoardPosition] = self.__player_board.get_ship_cells(
+            start_row,
+            start_column,
+            direction,
+            ship.get_size(),
+        )
+
+        for ship_position in ship_cells:
+            self.__ship_by_position[ship_position] = ship
+
+    def __move_to_next_ship(self) -> None:
+        """Advance the placement pointer after a ship was placed."""
+        self.__next_ship_index += 1
+        if self.__next_ship_index == len(self.__fleet.get_ships()):
+            self.__all_ships_placed = True
+
+    def __handle_ship_hit(self, row: int, column: int) -> ShotResult:
+        """Damage the ship at a hit position and return the shot result."""
+        hit_ship: Ship | None = self.__ship_by_position.get((row, column))
+        if hit_ship is None:
+            return ShotResult.HIT
+
+        hit_ship.hit()
+        if not hit_ship.is_destroyed():
+            return ShotResult.HIT
+
+        if self.__fleet.destroyed():
+            return ShotResult.WIN
+        return ShotResult.SUNK

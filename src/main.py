@@ -3,10 +3,11 @@ from game import Game
 from ui import TerminalUI
 
 
-def main():
-    settings = Settings()
-    game = Game(settings.board_size)
-    ui = TerminalUI(game, settings)
+def main() -> None:
+    """Create the game objects and start the terminal UI."""
+    settings: Settings = Settings()
+    game: Game = Game(settings.board_size, settings.ship_sizes)
+    ui: TerminalUI = TerminalUI(game, settings)
     ui.start()
 
 

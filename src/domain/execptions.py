@@ -1,2 +1,2 @@
 class AlreadyHitException(Exception):
-    pass
+    """Raised when a player fires at a cell that was already targeted."""
