@@ -80,16 +80,6 @@ class TerminalUI:
 
         self.__display_winner()
 
-    def __shot_result_message(self, shot_result: ShotResult) -> str:
-        """Return the message shown after a shot."""
-        result_messages: dict[ShotResult, str] = {
-            ShotResult.MISS: "Miss!",
-            ShotResult.HIT: "Hit!",
-            ShotResult.SUNK: "Hit and sunk!",
-            ShotResult.WIN: "Hit and sunk - final blow!",
-        }
-        return result_messages.get(shot_result, str(shot_result))
-
     def __display_winner(self) -> None:
         """Print the winner after the game ends."""
         winner: int | None = self.__game.get_winner()
@@ -98,3 +88,14 @@ class TerminalUI:
             return
 
         print(f"\nPlayer {winner} wins!")
+
+    @staticmethod
+    def __shot_result_message(shot_result: ShotResult) -> str:
+        """Return the message shown after a shot."""
+        result_messages: dict[ShotResult, str] = {
+            ShotResult.MISS: "Miss!",
+            ShotResult.HIT: "Hit!",
+            ShotResult.SUNK: "Hit and sunk!",
+            ShotResult.WIN: "Hit and sunk - final blow!",
+        }
+        return result_messages.get(shot_result, str(shot_result))
