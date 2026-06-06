@@ -1,4 +1,5 @@
 from dataclasses import dataclass
+from enum import StrEnum, auto
 
 from domain.board import BoardMatrix, BoardPosition, CellValue
 from domain.symbol import Symbols
@@ -7,15 +8,33 @@ from game import Game
 from .board_renderer import BoardOverlay, BoardRenderer
 from .keyboard import Key, raw_terminal, read_key
 
+class Direction(StrEnum):
+    UP = auto()
+    DOWN = auto()
+    RIGHT = auto()
+    LEFT = auto()
 
-DIRECTIONS: tuple[str, str, str, str] = ("up", "right", "down", "left")
-DIRECTION_DELTAS: dict[str, BoardPosition] = {
-    "up": (-1, 0),
-    "right": (0, 1),
-    "down": (1, 0),
-    "left": (0, -1),
-}
+    def delta(self) -> tuple[int, int]:
+        match self:
+            case Direction.UP:
+                return -1, 0
+            case Direction.DOWN:
+                return 1, 0
+            case Direction.RIGHT:
+                return 0, 1
+            case Direction.LEFT:
+                return 0, -1
 
+    def rotate(self) -> Direction:
+        match self:
+            case Direction.UP:
+                return Direction.RIGHT
+            case Direction.RIGHT:
+                return Direction.DOWN
+            case Direction.DOWN:
+                return Direction.LEFT
+            case Direction.LEFT:
+                return Direction.UP
 
 @dataclass
 class PlacementCursor:
@@ -23,12 +42,7 @@ class PlacementCursor:
 
     row: int = 0
     column: int = 0
-    direction_index: int = 1
-
-    def direction(self) -> str:
-        """Return the direction name for the current rotation."""
-        return DIRECTIONS[self.direction_index]
-
+    direction: Direction = Direction.RIGHT
 
 class ShipPlacementUI:
     """Lets players place ships with the keyboard."""
@@ -69,7 +83,7 @@ class ShipPlacementUI:
         try:
             return self.__game.place_ship(
                 (self.__cursor.row, self.__cursor.column),
-                self.__cursor.direction(),
+                self.__cursor.direction,
             )
         except ValueError:
             self.__message = "Positioning the ship there is impossible."
@@ -78,7 +92,7 @@ class ShipPlacementUI:
     def __handle_movement_key(self, pressed_key: str) -> None:
         """Update the cursor after an arrow key or rotation key."""
         if pressed_key == Key.ROTATE:
-            self.__cursor.direction_index = (self.__cursor.direction_index + 1) % len(DIRECTIONS)
+            self.__cursor.direction = self.__cursor.direction.rotate()
         elif pressed_key == Key.UP:
             self.__cursor.row -= 1
         elif pressed_key == Key.DOWN:
@@ -121,7 +135,7 @@ class ShipPlacementUI:
         """Return a clear description of the cursor for the current player."""
         display_row: int = self.__cursor.row + 1
         display_column: int = self.__cursor.column + 1
-        return f"Head: row {display_row}, col {display_column}; direction: {self.__cursor.direction()}"
+        return f"Head: row {display_row}, col {display_column}; direction: {self.__cursor.direction}"
 
     def __print_message_line(self) -> None:
         """Print the current error message, or a blank line."""
@@ -174,9 +188,9 @@ class ShipPlacementUI:
         """Start each ship on the first valid placement found on the board."""
         for row_index in range(len(board)):
             for column_index in range(len(board)):
-                for direction_index, direction in enumerate(DIRECTIONS):
+                for direction in Direction:
                     if self.__can_place_at(board, row_index, column_index, direction, ship_size):
-                        self.__cursor = PlacementCursor(row_index, column_index, direction_index)
+                        self.__cursor = PlacementCursor(row_index, column_index, direction)
                         return
 
         self.__cursor = PlacementCursor()
@@ -186,12 +200,12 @@ class ShipPlacementUI:
         board: BoardMatrix,
         start_row: int,
         start_column: int,
-        direction: str,
+        direction: Direction,
         ship_size: int,
     ) -> bool:
         """Return True when a ship fits at the requested position."""
         board_size: int = len(board)
-        row_step, column_step = DIRECTION_DELTAS[direction]
+        row_step, column_step = direction.delta()
 
         for cell_offset in range(ship_size):
             ship_row: int = start_row + row_step * cell_offset
@@ -206,7 +220,7 @@ class ShipPlacementUI:
 
     def __ship_cells(self, ship_size: int) -> list[BoardPosition]:
         """Return the cells currently covered by the ship preview."""
-        row_step, column_step = DIRECTION_DELTAS[self.__cursor.direction()]
+        row_step, column_step = self.__cursor.direction.delta()
         ship_cells: list[BoardPosition] = []
 
         for cell_offset in range(ship_size):
