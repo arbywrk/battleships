@@ -5,7 +5,6 @@ from typing import Any
 
 Message = dict[str, Any]
 
-
 class ConnectionClosedError(ConnectionError):
     """Raised when the remote peer closes the socket."""
 
@@ -27,4 +26,3 @@ def receive_message(file: Any) -> Message:
         raise ValueError("Expected a JSON object")
 
     return decoded_message
-

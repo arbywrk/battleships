@@ -135,7 +135,7 @@ class ShipPlacementSelector:
             self.__cursor.direction = self.__cursor.direction.rotate()
             normalize()
 
-        if pressed_key == Key.ROTATE:
+        if pressed_key == Key.ROTATE_RIGHT:
             rotate()
         elif pressed_key == Key.UP:
             move_up()

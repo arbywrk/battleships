@@ -12,7 +12,8 @@ class Key:
     RIGHT: str = "right"
     UP: str = "up"
     DOWN: str = "down"
-    ROTATE: str = "rotate"
+    ROTATE_RIGHT: str = "rotate-right"
+    ROTATE_LEFT: str = "rotate-left"
     OTHER: str = "other"
 
 
@@ -34,8 +35,11 @@ if os.name == "nt":
         if first_character in ("\r", "\n"):
             return Key.ENTER
 
-        if first_character.lower() == "r":
-            return Key.ROTATE
+        if first_character.lower() == "e":
+            return Key.ROTATE_RIGHT
+
+        if first_character.lower() == "q":
+            return Key.ROTATE_LEFT
 
         # Windows special keys are returned as a prefix followed by a code.
         if first_character in ("\x00", "\xe0"):
@@ -92,8 +96,11 @@ else:
         if first_character in ("\n", "\r"):
             return Key.ENTER
 
-        if first_character.lower() == "r":
-            return Key.ROTATE
+        if first_character.lower() == "e":
+            return Key.ROTATE_RIGHT
+
+        if first_character.lower() == "q":
+            return Key.ROTATE_LEFT
 
         if first_character == "\x1b":
             return _read_posix_arrow_key()
