@@ -23,6 +23,7 @@ class TerminalUI:
 
         while True:
             print("\n1) Local 1v1")
+            print("2) Online")
             print("0) Exit")
 
             menu_choice: str = input("Choose: ").strip()
@@ -31,9 +32,36 @@ class TerminalUI:
                 return
             if menu_choice == "1":
                 self.__game_loop()
-                return
+                self.__reset_game()
+                continue
+            if menu_choice == "2":
+                self.__online_game()
+                continue
 
             print("Invalid choice, try again.")
+
+    def __online_game(self) -> None:
+        """Try to join an online server, then return to the menu."""
+        import socket
+
+        from network.client import OnlineGameClient
+        from network.defaults import DEFAULT_HOST, DEFAULT_PORT
+
+        client: OnlineGameClient = OnlineGameClient(
+            DEFAULT_HOST,
+            DEFAULT_PORT,
+            self.__settings,
+        )
+
+        try:
+            client.start()
+        except (ConnectionRefusedError, TimeoutError, socket.gaierror, OSError):
+            print("\nNo online server is running.")
+            input("Press Enter to return to the menu.")
+
+    def __reset_game(self) -> None:
+        """Create a fresh local game after a completed game."""
+        self.__game = Game(self.__settings.board_size, self.__settings.ship_sizes)
 
     def __game_loop(self) -> None:
         """Run the two main game phases in order."""
