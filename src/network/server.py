@@ -8,7 +8,6 @@ from domain.shot_result import ShotResult
 from game import Game
 from settings import Settings
 
-from .defaults import DEFAULT_HOST, DEFAULT_PORT
 from .protocol import ConnectionClosedError, Message, receive_message, send_message
 
 
@@ -55,6 +54,10 @@ class ClientHandler(threading.Thread):
 
     def close(self) -> None:
         self.__closed = True
+        try:
+            self.__connection.shutdown(socket.SHUT_RDWR)
+        except OSError:
+            pass
         self.__connection.close()
 
 
@@ -69,24 +72,41 @@ class OnlineGameServer:
         self.__incoming_messages: queue.Queue[ClientMessage] = queue.Queue()
         self.__clients: dict[int, ClientHandler] = {}
         self.__next_request_id: int = 1
+        self.__stopped: threading.Event = threading.Event()
+        self.__server_socket: socket.socket | None = None
 
     def start(self) -> None:
         """Wait for two clients, then run placement and battle phases."""
-        with socket.create_server((self.__host, self.__port), reuse_port=False) as server_socket:
-            print(f"Server listening on {self.__host}:{self.__port}")
-            self.__accept_players(server_socket)
-
         try:
-            self.__broadcast({"type": "info", "message": "Both players connected. Game starting."})
-            self.__placement_phase()
-            self.__battle_phase()
+            with socket.create_server((self.__host, self.__port), reuse_port=False) as server_socket:
+                self.__server_socket = server_socket
+                server_socket.settimeout(0.5)
+                print(f"Server listening on {self.__host}:{self.__port}")
+                if not self.__accept_players(server_socket):
+                    return
+
+                self.__broadcast({"type": "info", "message": "Both players connected. Game starting."})
+                self.__placement_phase()
+                self.__battle_phase()
         finally:
+            self.__server_socket = None
             self.__close_clients()
 
-    def __accept_players(self, server_socket: socket.socket) -> None:
+    def stop(self) -> None:
+        """Stop accepting clients and close any active client connections."""
+        self.__stopped.set()
+        server_socket: socket.socket | None = self.__server_socket
+        if server_socket is not None:
+            server_socket.close()
+        self.__close_clients()
+
+    def __accept_players(self, server_socket: socket.socket) -> bool:
         for player_number in (1, 2):
             print(f"Waiting for player {player_number}...")
-            connection, address = server_socket.accept()
+            connection, address = self.__accept_next_connection(server_socket)
+            if connection is None:
+                return False
+
             print(f"Player {player_number} connected from {address[0]}:{address[1]}")
 
             client: ClientHandler = ClientHandler(
@@ -102,6 +122,24 @@ class OnlineGameServer:
                 "board_size": self.__settings.board_size,
                 "ship_sizes": self.__settings.ship_sizes,
             })
+
+        return True
+
+    def __accept_next_connection(
+        self,
+        server_socket: socket.socket,
+    ) -> tuple[socket.socket, tuple[str, int]] | tuple[None, None]:
+        while not self.__stopped.is_set():
+            try:
+                return server_socket.accept()
+            except TimeoutError:
+                continue
+            except OSError:
+                if self.__stopped.is_set():
+                    return None, None
+                raise
+
+        return None, None
 
     def __placement_phase(self) -> None:
         more_ships_to_place: bool = True
@@ -191,6 +229,9 @@ class OnlineGameServer:
             if message.get("request_id") == request_id:
                 return message
 
+        # should not reach here
+        return {"" : ""}
+
     def __boards_for_player(self, player_number: int) -> tuple[BoardMatrix, BoardMatrix]:
         if player_number == 1:
             return self.__game.get_player1_boards_matrix()
@@ -230,17 +271,3 @@ class OnlineGameServer:
     def __close_clients(self) -> None:
         for client in self.__clients.values():
             client.close()
-
-
-def main() -> None:
-    server = OnlineGameServer(DEFAULT_HOST, DEFAULT_PORT, Settings())
-    try:
-        server.start()
-    except KeyboardInterrupt:
-        print("\nServer stopped.")
-    except ConnectionClosedError as error:
-        print(f"\n{error}")
-
-
-if __name__ == "__main__":
-    main()

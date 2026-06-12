@@ -23,7 +23,8 @@ class TerminalUI:
 
         while True:
             print("\n1) Local 1v1")
-            print("2) Online")
+            print("2) Host online game")
+            print("3) Join online game")
             print("0) Exit")
 
             menu_choice: str = input("Choose: ").strip()
@@ -35,13 +36,52 @@ class TerminalUI:
                 self.__reset_game()
                 continue
             if menu_choice == "2":
-                self.__online_game()
+                self.__host_online_game()
+                continue
+            if menu_choice == "3":
+                self.__join_online_game()
                 continue
 
             print("Invalid choice, try again.")
 
-    def __online_game(self) -> None:
-        """Try to join an online server, then return to the menu."""
+    def __host_online_game(self) -> None:
+        """Start a local server, join it as player 1, then return to the menu."""
+        import threading
+        import time
+
+        from network.defaults import DEFAULT_HOST, DEFAULT_PORT
+        from network.server import OnlineGameServer
+
+        if not self.__can_host_online_game(DEFAULT_HOST, DEFAULT_PORT):
+            print("\nCannot host right now. The online port is already in use.")
+            input("Press Enter to return to the menu.")
+            return
+
+        server: OnlineGameServer = OnlineGameServer(
+            DEFAULT_HOST,
+            DEFAULT_PORT,
+            self.__settings,
+        )
+        server_thread = threading.Thread(
+            target=self.__run_online_server,
+            args=(server,),
+            daemon=True,
+        )
+        server_thread.start()
+        time.sleep(0.2)
+
+        print("\nHosting online game.")
+        try:
+            self.__run_online_client("Could not connect to the hosted game.")
+        finally:
+            server.stop()
+
+    def __join_online_game(self) -> None:
+        """Join a hosted online game, then return to the menu."""
+        self.__run_online_client("No online server is running.")
+
+    def __run_online_client(self, unavailable_message: str) -> None:
+        """Run the online client and handle failed connection attempts."""
         import socket
 
         from network.client import OnlineGameClient
@@ -55,9 +95,36 @@ class TerminalUI:
 
         try:
             client.start()
+        except KeyboardInterrupt:
+            print("\nOnline game stopped.")
         except (ConnectionRefusedError, TimeoutError, socket.gaierror, OSError):
-            print("\nNo online server is running.")
+            print(f"\n{unavailable_message}")
             input("Press Enter to return to the menu.")
+
+    @staticmethod
+    def __run_online_server(server) -> None:
+        """Run the server thread without exposing tracebacks to the menu."""
+        from network.protocol import ConnectionClosedError
+
+        try:
+            server.start()
+        except ConnectionClosedError as error:
+            print(f"\n{error}")
+        except OSError as error:
+            print(f"\nOnline server stopped: {error}")
+
+    @staticmethod
+    def __can_host_online_game(host: str, port: int) -> bool:
+        """Return True when the configured host and port are available."""
+        import socket
+
+        try:
+            with socket.socket(socket.AF_INET, socket.SOCK_STREAM) as probe_socket:
+                probe_socket.bind((host, port))
+        except OSError:
+            return False
+
+        return True
 
     def __reset_game(self) -> None:
         """Create a fresh local game after a completed game."""

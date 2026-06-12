@@ -2,11 +2,10 @@ import socket
 from typing import Any
 
 from domain.board import BoardMatrix, CellValue
-from domain.symbol import Symbols
 from settings import Settings
-from ui.terminal.board_renderer import BoardRenderer
+from ui.terminal.battle import BattleTargetSelector
+from ui.terminal.placement import ShipPlacementSelector
 
-from .defaults import DEFAULT_HOST, DEFAULT_PORT
 from .protocol import ConnectionClosedError, Message, receive_message, send_message
 
 
@@ -16,8 +15,19 @@ class OnlineGameClient:
     def __init__(self, host: str, port: int, settings: Settings) -> None:
         self.__host: str = host
         self.__port: int = port
-        self.__settings: Settings = settings
         self.__player_number: int | None = None
+        self.__placement_selector: ShipPlacementSelector = ShipPlacementSelector(
+            settings.player1_symbols,
+            settings.player2_symbols,
+            settings.compact_board_rendering,
+        )
+        self.__battle_selector: BattleTargetSelector = BattleTargetSelector(
+            settings.player1_symbols,
+            settings.player2_symbols,
+            settings.player1_opponent_symbols,
+            settings.player2_opponent_symbols,
+            settings.compact_board_rendering,
+        )
 
     def start(self) -> None:
         with socket.create_connection((self.__host, self.__port)) as connection:
@@ -76,130 +86,44 @@ class OnlineGameClient:
     def __prompt_for_ship(self, message: Message) -> Message:
         board: BoardMatrix = self.__deserialize_board(message["own_board"])
         ship_size: int = int(message["ship_size"])
-
-        print("\n=== Place Your Ships ===")
-        self.__print_optional_message(message)
-        print(BoardRenderer.printable_board(
+        player_number: int = self.__require_player_number()
+        (row, column), direction = self.__placement_selector.select_ship_position(
+            player_number,
+            ship_size,
             board,
-            self.__own_symbols(),
-            f"Player {self.__player_number}:",
-            compact=self.__settings.compact_board_rendering,
-        ))
-        print(f"Place ship size {ship_size}. Rows and columns are 1-based.")
-
-        row, column = self.__prompt_position("Ship head")
-        direction: str = self.__prompt_direction()
+            message.get("message"),
+        )
 
         return {
             "type": "place_ship",
             "request_id": message["request_id"],
-            "row": row,
-            "column": column,
+            "row": row + 1,
+            "column": column + 1,
             "direction": direction,
         }
 
     def __prompt_for_target(self, message: Message) -> Message:
         own_board: BoardMatrix = self.__deserialize_board(message["own_board"])
         opponent_board: BoardMatrix = self.__deserialize_board(message["opponent_board"])
-
-        print("\n=== Battle ===")
-        self.__print_optional_message(message)
-        print(BoardRenderer.side_by_side(
-            BoardRenderer.printable_board(
-                own_board,
-                self.__own_symbols(),
-                "Your board:",
-                compact=self.__settings.compact_board_rendering,
-            ),
-            BoardRenderer.printable_board(
-                opponent_board,
-                self.__opponent_symbols(),
-                "Opponent:",
-                compact=self.__settings.compact_board_rendering,
-            ),
-        ))
-
-        row, column = self.__prompt_position("Target")
+        row, column = self.__battle_selector.select_target(
+            self.__require_player_number(),
+            own_board,
+            opponent_board,
+            message.get("message"),
+        )
 
         return {
             "type": "fire",
             "request_id": message["request_id"],
-            "row": row,
-            "column": column,
+            "row": row + 1,
+            "column": column + 1,
         }
 
-    @staticmethod
-    def __prompt_position(label: str) -> tuple[int, int]:
-        row, column = 0, 0
-        while True:
-            raw_value: str = input(f"{label} row col: ").strip()
-            parts: list[str] = raw_value.replace(",", " ").split()
-            if len(parts) != 2:
-                print("Enter two numbers, for example: 3 7")
-                continue
-
-            try:
-                row: int = int(parts[0])
-                column: int = int(parts[1])
-            except ValueError:
-                print("Row and column must be numbers.")
-                continue
-
-            if row <= 0 or column <= 0:
-                print("Rows and columns start at 1.")
-                continue
-
-            break
-        return row, column
-
-    @staticmethod
-    def __prompt_direction() -> str:
-        directions: dict[str, str] = {
-            "u": "up",
-            "up": "up",
-            "d": "down",
-            "down": "down",
-            "l": "left",
-            "left": "left",
-            "r": "right",
-            "right": "right",
-        }
-
-        while True:
-            raw_value: str = input("Direction (up/down/left/right): ").strip().lower()
-            direction: str | None = directions.get(raw_value)
-            if direction is not None:
-                return direction
-            print("Choose up, down, left, or right.")
-
-    def __own_symbols(self) -> Symbols:
-        if self.__player_number == 2:
-            return self.__settings.player2_symbols
-        return self.__settings.player1_symbols
-
-    def __opponent_symbols(self) -> Symbols:
-        if self.__player_number == 2:
-            return self.__settings.player2_opponent_symbols
-        return self.__settings.player1_opponent_symbols
+    def __require_player_number(self) -> int:
+        if self.__player_number is None:
+            raise RuntimeError("The server has not assigned a player number yet")
+        return self.__player_number
 
     @staticmethod
     def __deserialize_board(board: list[list[int]]) -> BoardMatrix:
         return [[CellValue(cell) for cell in row] for row in board]
-
-    @staticmethod
-    def __print_optional_message(message: Message) -> None:
-        optional_message: str | None = message.get("message")
-        if optional_message:
-            print(optional_message)
-
-
-def main() -> None:
-    client = OnlineGameClient(DEFAULT_HOST, DEFAULT_PORT, Settings())
-    try:
-        client.start()
-    except KeyboardInterrupt:
-        print("\nClient stopped.")
-
-
-if __name__ == "__main__":
-    main()

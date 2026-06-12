@@ -44,50 +44,52 @@ class PlacementCursor:
     column: int = 0
     direction: Direction = Direction.RIGHT
 
-class ShipPlacementUI:
-    """Lets players place ships with the keyboard."""
+class ShipPlacementSelector:
+    """Lets a player choose a ship position with the keyboard."""
 
     def __init__(
         self,
-        game: Game,
         player1_symbols: Symbols,
         player2_symbols: Symbols,
         compact_board_rendering: bool,
     ) -> None:
-        self.__game: Game = game
         self.__player1_symbols: Symbols = player1_symbols
         self.__player2_symbols: Symbols = player2_symbols
         self.__compact_board_rendering: bool = compact_board_rendering
         self.__cursor: PlacementCursor = PlacementCursor()
         self.__message: str | None = None
 
-    def place_next_ship(self, player_number: int, ship_size: int) -> bool:
-        """Run the placement screen until the current ship is placed."""
-        player_board: BoardMatrix = self.__get_player_board(player_number)
+    def select_ship_position(
+        self,
+        player_number: int,
+        ship_size: int,
+        player_board: BoardMatrix,
+        message: str | None = None,
+    ) -> tuple[BoardPosition, str]:
+        """Let a player choose a ship position with the keyboard."""
+        self.__message = message
         self.__move_cursor_to_first_valid_position(player_board, ship_size)
 
         with raw_terminal():
             while True:
-                self.__render(player_number, ship_size)
+                self.__render_single_board(player_number, player_board, ship_size)
                 pressed_key: str = read_key()
 
                 if pressed_key == Key.ENTER:
-                    ship_was_placed: bool | None = self.__try_place_ship()
-                    if ship_was_placed is not None:
-                        return ship_was_placed
+                    if self.__can_place_at(
+                        player_board,
+                        self.__cursor.row,
+                        self.__cursor.column,
+                        self.__cursor.direction,
+                        ship_size,
+                    ):
+                        return (
+                            (self.__cursor.row, self.__cursor.column),
+                            self.__cursor.direction.value,
+                        )
+                    self.__message = "Positioning the ship there is impossible."
                 else:
                     self.__handle_movement_key(pressed_key)
-
-    def __try_place_ship(self) -> bool | None:
-        """Place the ship, or show an error and keep the placement screen open."""
-        try:
-            return self.__game.place_ship(
-                (self.__cursor.row, self.__cursor.column),
-                self.__cursor.direction,
-            )
-        except ValueError:
-            self.__message = "Positioning the ship there is impossible."
-            return None
 
     def __handle_movement_key(self, pressed_key: str) -> None:
         """Update the cursor after an arrow key or rotation key."""
@@ -103,26 +105,13 @@ class ShipPlacementUI:
         elif pressed_key == Key.RIGHT:
             self.__cursor.column += 1
 
-    def __get_player_board(self, player_number: int) -> BoardMatrix:
-        """Return the own board for the requested player."""
-        if player_number == 1:
-            player_board, _opponent_board = self.__game.get_player1_boards_matrix()
-        else:
-            player_board, _opponent_board = self.__game.get_player2_boards_matrix()
-        return player_board
-
-    def __render(self, player_number: int, ship_size: int) -> None:
-        """Print the full placement screen."""
-        player1_board, _player1_opponent_board = self.__game.get_player1_boards_matrix()
-        player2_board, _player2_opponent_board = self.__game.get_player2_boards_matrix()
-
-        player1_overlay: BoardOverlay | None = None
-        player2_overlay: BoardOverlay | None = None
-        if player_number == 1:
-            player1_overlay = self.__preview_overlay(player1_board, ship_size)
-        else:
-            player2_overlay = self.__preview_overlay(player2_board, ship_size)
-
+    def __render_single_board(
+        self,
+        player_number: int,
+        player_board: BoardMatrix,
+        ship_size: int,
+    ) -> None:
+        """Print the placement screen for one player."""
         print("\033[H\033[J", end="")
         print("=== Place Your Ships ===")
         print(f"\nPlayer {player_number} - place your ship (size {ship_size})")
@@ -130,7 +119,13 @@ class ShipPlacementUI:
         print("Move with arrow keys, rotate with r, place with Enter.")
         self.__print_message_line()
         print()
-        print(self.__render_player_boards(player1_board, player2_board, player1_overlay, player2_overlay))
+        print(BoardRenderer.printable_board(
+            player_board,
+            self.__symbols_for_player(player_number),
+            f"Player {player_number}:",
+            overlay=self.__preview_overlay(player_board, ship_size),
+            compact=self.__compact_board_rendering,
+        ))
 
     def __cursor_description(self) -> str:
         """Return a clear description of the cursor for the current player."""
@@ -147,29 +142,10 @@ class ShipPlacementUI:
         print(f"Error: {self.__message}")
         self.__message = None
 
-    def __render_player_boards(
-        self,
-        player1_board: BoardMatrix,
-        player2_board: BoardMatrix,
-        player1_overlay: BoardOverlay | None,
-        player2_overlay: BoardOverlay | None,
-    ) -> str:
-        """Return player 1 and player 2 boards side by side."""
-        player1_text: str = BoardRenderer.printable_board(
-            player1_board,
-            self.__player1_symbols,
-            "Player 1:",
-            overlay=player1_overlay,
-            compact=self.__compact_board_rendering,
-        )
-        player2_text: str = BoardRenderer.printable_board(
-            player2_board,
-            self.__player2_symbols,
-            "Player 2:",
-            overlay=player2_overlay,
-            compact=self.__compact_board_rendering,
-        )
-        return BoardRenderer.side_by_side(player1_text, player2_text)
+    def __symbols_for_player(self, player_number: int) -> Symbols:
+        if player_number == 2:
+            return self.__player2_symbols
+        return self.__player1_symbols
 
     def __preview_overlay(self, board: BoardMatrix, ship_size: int) -> BoardOverlay:
         """Return symbols for the visible part of the ship preview."""
@@ -230,3 +206,47 @@ class ShipPlacementUI:
             ship_cells.append((ship_row, ship_column))
 
         return ship_cells
+
+
+class ShipPlacementUI:
+    """Places ships in a local game using the shared keyboard selector."""
+
+    def __init__(
+        self,
+        game: Game,
+        player1_symbols: Symbols,
+        player2_symbols: Symbols,
+        compact_board_rendering: bool,
+    ) -> None:
+        self.__game: Game = game
+        self.__selector: ShipPlacementSelector = ShipPlacementSelector(
+            player1_symbols,
+            player2_symbols,
+            compact_board_rendering,
+        )
+
+    def place_next_ship(self, player_number: int, ship_size: int) -> bool:
+        """Run the placement screen until the current ship is placed."""
+        player_board: BoardMatrix = self.__get_player_board(player_number)
+        message: str | None = None
+
+        while True:
+            ship_position, ship_direction = self.__selector.select_ship_position(
+                player_number,
+                ship_size,
+                player_board,
+                message,
+            )
+
+            try:
+                return self.__game.place_ship(ship_position, ship_direction)
+            except ValueError:
+                message = "Positioning the ship there is impossible."
+
+    def __get_player_board(self, player_number: int) -> BoardMatrix:
+        """Return the own board for the requested player."""
+        if player_number == 1:
+            player_board, _opponent_board = self.__game.get_player1_boards_matrix()
+        else:
+            player_board, _opponent_board = self.__game.get_player2_boards_matrix()
+        return player_board
