@@ -4,7 +4,6 @@ from .fleet import Fleet
 from .ship import Ship
 from .shot_result import ShotResult
 
-
 class Player:
     """Stores one player's fleet and both boards they can see."""
 
@@ -16,17 +15,16 @@ class Player:
         self.__next_ship_index: int = 0
         self.__ship_by_position: dict[BoardPosition, Ship] = {}
 
-    def place_ship(self, ship_position: BoardPosition, ship_direction: str) -> None:
+    def place_ship(self, ship_position: BoardPosition, ship_direction: ShipDirection) -> None:
         """Place the next unplaced ship in this player's fleet."""
         if self.__all_ships_placed:
             raise ValueError("All ships were already placed")
 
         ship: Ship = self.__fleet.get_ships()[self.__next_ship_index]
-        direction: ShipDirection = ShipDirection(ship_direction)
         start_row, start_column = ship_position
 
-        self.__player_board.place_ship(start_row, start_column, direction, ship.get_size())
-        self.__remember_ship_positions(start_row, start_column, direction, ship)
+        self.__player_board.place_ship(start_row, start_column, ship_direction, ship.get_size())
+        self.__remember_ship_positions(start_row, start_column, ship_direction, ship)
         self.__move_to_next_ship()
 
     def all_ships_placed(self) -> bool:

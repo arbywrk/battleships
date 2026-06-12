@@ -89,21 +89,62 @@ class ShipPlacementSelector:
                         )
                     self.__message = "Positioning the ship there is impossible."
                 else:
-                    self.__handle_movement_key(pressed_key)
+                    self.__handle_movement_key(pressed_key, ship_size, len(player_board))
 
-    def __handle_movement_key(self, pressed_key: str) -> None:
+    def __handle_movement_key(self, pressed_key: str, ship_size: int, board_size: int) -> None:
         """Update the cursor after an arrow key or rotation key."""
-        # TODO: implement border limits for ship placement, taking into account ship length and rotation
-        if pressed_key == Key.ROTATE:
-            self.__cursor.direction = self.__cursor.direction.rotate()
-        elif pressed_key == Key.UP:
+        def normalize():
+            # normalize up
+            if self.__cursor.direction is Direction.UP:
+                self.__cursor.row = max(ship_size - 1, self.__cursor.row)
+            else:
+                self.__cursor.row = max(0, self.__cursor.row)
+            # normalize down
+            if self.__cursor.direction is Direction.DOWN:
+                self.__cursor.row = min(board_size - ship_size, self.__cursor.row)
+            else:
+                self.__cursor.row = min(board_size - 1, self.__cursor.row)
+            # normalize right
+            if self.__cursor.direction is Direction.RIGHT:
+                self.__cursor.column = min(board_size - ship_size, self.__cursor.column)
+            else:
+                self.__cursor.column = min(board_size - 1, self.__cursor.column)
+            # normalize left
+            if self.__cursor.direction is Direction.LEFT:
+                self.__cursor.column = max(ship_size - 1, self.__cursor.column)
+            else:
+                self.__cursor.column = max(0, self.__cursor.column)
+
+        def move_up():
             self.__cursor.row -= 1
-        elif pressed_key == Key.DOWN:
+            normalize()
+
+        def move_down():
             self.__cursor.row += 1
-        elif pressed_key == Key.LEFT:
-            self.__cursor.column -= 1
-        elif pressed_key == Key.RIGHT:
+            normalize()
+
+        def move_right():
             self.__cursor.column += 1
+            normalize()
+
+        def move_left():
+            self.__cursor.column -= 1
+            normalize()
+
+        def rotate():
+            self.__cursor.direction = self.__cursor.direction.rotate()
+            normalize()
+
+        if pressed_key == Key.ROTATE:
+            rotate()
+        elif pressed_key == Key.UP:
+            move_up()
+        elif pressed_key == Key.DOWN:
+            move_down()
+        elif pressed_key == Key.LEFT:
+            move_left()
+        elif pressed_key == Key.RIGHT:
+            move_right()
 
     def __render_single_board(
         self,
