@@ -91,6 +91,7 @@ class ShipPlacementUI:
 
     def __handle_movement_key(self, pressed_key: str) -> None:
         """Update the cursor after an arrow key or rotation key."""
+        # TODO: implement border limits for ship placement, taking into account ship length and rotation
         if pressed_key == Key.ROTATE:
             self.__cursor.direction = self.__cursor.direction.rotate()
         elif pressed_key == Key.UP:
